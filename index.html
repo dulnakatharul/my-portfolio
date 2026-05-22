@@ -1,234 +1,481 @@
  <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00ff88">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('App Service Worker Registered!'))
+                    .catch(err => console.log('Service Worker Error', err));
+            });
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lag-Free Smooth Particle Text with Stickman</title>
+    <title>Tharul's Cyber Portfolio</title>
     <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; padding: 0;
-            background: radial-gradient(circle at center, #0c1020 0%, #050508 100%);
-            overflow: hidden;
-            font-family: sans-serif;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            height: 100vh;
+        /* CSS Variables */
+        :root {
+            --bg-color: #090d16;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --text-color: #ffffff;
+            --text-muted: #94a3b8;
+            --primary-color: #00ff88;
+            --border-color: rgba(31, 41, 55, 0.7);
         }
-        canvas {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1; pointer-events: none;
+
+        [data-theme="light"] {
+            --bg-color: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --text-color: #0f172a;
+            --text-muted: #64748b;
+            --primary-color: #0ea5e9;
+            --border-color: rgba(226, 232, 240, 0.7);
         }
-        .ui-container { 
-            position: relative; 
-            z-index: 10; 
-            margin-top: auto; 
-            margin-bottom: 60px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; scroll-behavior: smooth; }
+        
+        body { 
+            background: var(--bg-color);
+            color: var(--text-color); 
+            overflow-x: hidden; 
+            position: relative;
         }
-        .search-box {
-            background: rgba(5, 5, 10, 0.8);
-            border: 2px solid #00ffcc; border-radius: 30px;
-            padding: 12px 30px; 
-            box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+
+        /* Neon Cursor Effect */
+        .custom-cursor {
+            width: 12px; height: 12px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            position: fixed;
+            transform: translate(-50%, -50%);
+            pointer-events: none; 
+            z-index: 9999;
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+            box-shadow: 0 0 15px var(--primary-color), 0 0 30px var(--primary-color);
         }
-        .search-box input {
-            background: transparent; border: none; color: #fff;
-            font-size: 18px; text-align: center; outline: none;
-            width: 250px; letter-spacing: 3px; font-weight: bold;
+        .custom-cursor.hovered {
+            width: 25px; height: 25px;
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 0 20px var(--primary-color);
         }
+
+        /* Particle Background */
+        #particles-js { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; pointer-events: all; }
+        nav, section { position: relative; z-index: 2; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 5px; }
+        
+        /* Navigation Bar */
+        nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 50px; background: rgba(9, 13, 22, 0.4);
+            position: fixed; width: 100%; top: 0; z-index: 100;
+            border-bottom: 1px solid var(--border-color); backdrop-filter: blur(12px);
+        }
+        .logo { font-size: 24px; font-weight: 800; color: var(--primary-color); letter-spacing: 3px; }
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-links { display: flex; list-style: none; gap: 35px; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: 0.3s; }
+        .nav-links a:hover { color: var(--primary-color); }
+
+        .theme-btn {
+            background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color);
+            padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 13px; transition: 0.3s;
+        }
+        .theme-btn:hover { background: var(--primary-color); color: black; }
+
+        /* 🎯 LOGIN BUTTON STYLE */
+        .login-nav-btn {
+            background: var(--primary-color); border: 1px solid var(--primary-color); color: black;
+            padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 13px; transition: 0.3s;
+            cursor: pointer;
+        }
+        .login-nav-btn:hover { background: transparent; color: var(--primary-color); box-shadow: 0 0 15px var(--primary-color); }
+
+        /* 🎯 CYBER LOGIN POPUP WINDOW (MODAL) */
+        .login-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 8, 15, 0.85); backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: 0.4s ease;
+        }
+        .login-modal.show { opacity: 1; pointer-events: auto; }
+
+        .login-box {
+            background: rgba(17, 24, 39, 0.95); border: 2px solid var(--primary-color);
+            padding: 40px; border-radius: 20px; text-align: center; width: 350px;
+            box-shadow: 0 0 30px var(--primary-color); position: relative;
+            transform: scale(0.8); transition: 0.4s ease;
+        }
+        .login-modal.show .login-box { transform: scale(1); }
+
+        .close-modal {
+            position: absolute; top: 15px; right: 20px; font-size: 22px;
+            color: var(--text-muted); cursor: pointer; background: none; border: none;
+        }
+        .close-modal:hover { color: #ff4757; }
+
+        .login-box h2 { font-size: 24px; color: var(--primary-color); margin-bottom: 20px; letter-spacing: 2px; }
+        .login-box input {
+            width: 100%; padding: 12px; background: rgba(9, 13, 22, 0.8);
+            border: 1px solid var(--border-color); border-radius: 8px; color: white;
+            font-size: 15px; text-align: center; outline: none; margin-bottom: 15px;
+        }
+        .login-box input:focus { border-color: var(--primary-color); }
+        
+        .error-msg { color: #ff4757; font-size: 13px; margin-bottom: 15px; font-weight: bold; height: 18px; }
+        
+        .submit-login-btn {
+            width: 100%; background: var(--primary-color); border: none; color: black;
+            padding: 12px; font-size: 15px; font-weight: bold; border-radius: 25px; cursor: pointer; transition: 0.3s;
+        }
+        .submit-login-btn:hover { box-shadow: 0 0 15px var(--primary-color); transform: translateY(-2px); }
+
+        /* Hero Section */
+        .hero { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; width: 100vw; }
+        .hero h1 { font-size: 65px; margin-bottom: 20px; letter-spacing: 4px; font-weight: 900; color: var(--text-color); }
+        .hero h1 span { color: var(--primary-color); display: inline-block; }
+        
+        .typing-container { font-size: 22px; color: var(--text-muted); height: 35px; margin-bottom: 40px; font-family: monospace; }
+        .typed-text { color: var(--primary-color); font-weight: bold; }
+        .cursor { display: inline-block; width: 3px; background-color: var(--primary-color); animation: blink 0.7s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+
+        .btn {
+            background: transparent; border: 2px solid var(--primary-color); color: var(--primary-color);
+            padding: 14px 35px; font-size: 16px; font-weight: bold; border-radius: 30px; text-decoration: none; letter-spacing: 1px; transition: 0.4s;
+        }
+        .btn:hover { background: var(--primary-color); color: #000; transform: translateY(-3px); box-shadow: 0 0 20px var(--primary-color); }
+
+        /* Sections Styling */
+        .section-title { font-size: 42px; margin-bottom: 20px; color: var(--text-color); letter-spacing: 2px; text-align: center; }
+        .projects-section, .calc-section, .notes-section, .contact-section { padding: 120px 50px; display: flex; flex-direction: column; align-items: center; }
+
+        /* Skills Container Style */
+        .skills-container { display: flex; gap: 15px; margin-bottom: 40px; justify-content: center; flex-wrap: wrap; }
+        .skill-badge { background: var(--card-bg); border: 1px solid var(--border-color); backdrop-filter: blur(5px); padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 600; color: var(--text-color); transition: 0.3s; }
+        .skill-badge:hover { border-color: var(--primary-color); color: var(--primary-color); transform: translateY(-2px); }
+
+        /* Projects Grid */
+        .projects-grid { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; max-width: 1200px; width: 100%; }
+        .project-card { background: var(--card-bg); border: 1px solid var(--border-color); backdrop-filter: blur(10px); border-radius: 20px; padding: 40px 30px; width: 340px; text-align: center; transition: 0.4s; }
+        .project-card:hover { transform: translateY(-12px); border-color: var(--primary-color); box-shadow: 0 10px 25px rgba(0, 255, 136, 0.1); }
+        .project-icon { font-size: 55px; margin-bottom: 20px; }
+        .project-card h3 { font-size: 25px; margin-bottom: 15px; color: var(--text-color); }
+        .project-card p { color: var(--text-muted); font-size: 15px; line-height: 1.6; margin-bottom: 30px; }
+        .card-btn { display: inline-block; background: transparent; color: var(--primary-color); border: 1px solid var(--primary-color); padding: 10px 25px; font-weight: bold; border-radius: 25px; text-decoration: none; }
+        .card-btn:hover { background: var(--primary-color); color: #000; }
+
+        /* Cyber Notes */
+        .notes-container { background: var(--card-bg); border: 2px solid var(--border-color); backdrop-filter: blur(10px); border-radius: 20px; padding: 30px; max-width: 450px; width: 100%; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+        .note-input-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .note-input-box input { flex: 1; padding: 12px; background: rgba(9, 13, 22, 0.7); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-size: 15px; outline: none; }
+        .add-note-btn { background: var(--primary-color); color: black; border: none; padding: 0 20px; font-weight: bold; border-radius: 8px; font-size: 18px; }
+        .notes-list { list-style: none; display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; }
+        .note-item { display: flex; justify-content: space-between; align-items: center; background: rgba(9, 13, 22, 0.5); padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary-color); }
+        .delete-note { background: transparent; border: none; color: #ef4444; font-size: 16px; font-weight: bold; }
+
+        /* Calculator */
+        .calculator { background: var(--card-bg); border: 2px solid var(--border-color); backdrop-filter: blur(10px); border-radius: 20px; padding: 25px; width: 320px; }
+        .calc-screen { width: 100%; height: 60px; background: rgba(9, 13, 22, 0.7); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 20px; color: var(--primary-color); text-align: right; padding: 15px; font-size: 24px; outline: none; }
+        .calc-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .calc-btn { background: rgba(31, 41, 55, 0.5); border: 1px solid var(--border-color); color: var(--text-color); padding: 18px; font-size: 18px; font-weight: bold; border-radius: 10px; }
+        .calc-btn:hover { color: var(--primary-color); border-color: var(--primary-color); }
+        .calc-btn.equal { background: var(--primary-color); color: black; grid-column: span 2; }
+
+        /* Contact Section */
+        .contact-form { background: var(--card-bg); border: 1px solid var(--border-color); backdrop-filter: blur(10px); padding: 40px; border-radius: 20px; max-width: 500px; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+        .contact-form input, .contact-form textarea { width: 100%; padding: 14px; background: rgba(9, 13, 22, 0.6); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-size: 15px; outline: none; }
+        .submit-btn { background: var(--primary-color); color: #000; border: none; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; }
+
+        /* Back to Top Button */
+        .back-to-top {
+            position: fixed; bottom: 30px; right: 30px;
+            background: var(--card-bg); border: 2px solid var(--primary-color);
+            color: var(--primary-color); width: 45px; height: 45px;
+            border-radius: 50%; font-size: 20px; font-weight: bold;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 99; opacity: 0; pointer-events: none; transition: 0.3s;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        }
+        .back-to-top.show { opacity: 1; pointer-events: auto; }
+        .back-to-top:hover { background: var(--primary-color); color: black; }
     </style>
 </head>
 <body>
 
-    <canvas id="particleCanvas"></canvas>
+    <div class="custom-cursor" id="customCursor"></div>
 
-    <div class="ui-container">
-        <div class="search-box">
-            <input type="text" id="search-input" placeholder="TYPE SUDDDH...">
+    <div id="particles-js"></div>
+
+    <nav>
+        <div class="logo">THARUL.IO</div>
+        <div class="nav-right">
+            <ul class="nav-links">
+                <li><a href="#">Home</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#notes">Notes</a></li>
+                <li><a href="#calculator">Tools</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">LIGHT MODE</button>
+            <button class="login-nav-btn" onclick="openLoginModal()">LOGIN</button>
+        </div>
+    </nav>
+
+    <div class="login-modal" id="loginModal">
+        <div class="login-box">
+            <button class="close-modal" onclick="closeLoginModal()">✕</button>
+            <h2>SECURE LOGIN</h2>
+            <form onsubmit="verifySiteLogin(event)">
+                <input type="password" id="sitePassword" placeholder="ENTER PASSWORD" required>
+                <div class="error-msg" id="loginError"></div>
+                <button type="submit" class="submit-login-btn">ACCESS SECURELY</button>
+            </form>
         </div>
     </div>
 
+    <section class="hero">
+        <h1>HI, I AM <span>THARUL</span></h1>
+        <div class="typing-container">
+            I am a <span class="typed-text" id="typedText"></span><span class="cursor">&nbsp;</span>
+        </div>
+        <a href="#projects" class="btn">EXPLORE CREATIONS</a>
+    </section>
+
+    <section class="projects-section" id="projects">
+        <h2 class="section-title">MY CREATIONS</h2>
+        
+        <div class="skills-container">
+            <a href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank" class="skill-badge" style="text-decoration: none;">⚡ HTML5</a>
+            <a href="https://developer.mozilla.org/en-US/docs/Web/CSS" target="_blank" class="skill-badge" style="text-decoration: none;">🎨 CSS3</a>
+            <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" class="skill-badge" style="text-decoration: none;">🚀 JavaScript</a>
+            <a href="https://www.python.org/" target="_blank" class="skill-badge" style="text-decoration: none;">🐍 Python</a>
+        </div>
+
+        <div class="projects-grid">
+            <div class="project-card">
+                <div class="project-icon">🎮</div>
+                <h3>Stickman Catch</h3>
+                <p>A fun and interactive browser mini-game built using HTML5 Canvas and JavaScript physics where players catch falling stickmen.</p>
+                <a href="stickman_game.html" target="_blank" class="card-btn">PLAY GAME</a>
+            </div>
+            <div class="project-card">
+                <div class="project-icon">❌⭕</div>
+                <h3>Cyber Tic-Tac-Toe</h3>
+                <p>A glowing neon cross-and-circle strategy game built for two players, featuring dynamic neon light themes and real-time win detection.</p>
+                <a href="tictactoe.html" target="_blank" class="card-btn">PLAY GAME</a>
+            </div>
+            <div class="project-card">
+                <div class="project-icon">🤖</div>
+                <h3>Cyber AI Chatbot</h3>
+                <p>An intelligent, offline-capable conversational bot built with JavaScript pattern recognition to chat smoothly in Sinhala and English.</p>
+                <a href="my_ai_bot.html" target="_blank" class="card-btn">CHAT NOW</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="notes-section" id="notes">
+        <h2 class="section-title">CYBER NOTES APP</h2>
+        <div class="notes-container">
+            <div class="note-input-box">
+                <input type="text" id="noteInput" placeholder="Add a new task or note...">
+                <button class="add-note-btn" onclick="addNote()">+</button>
+            </div>
+            <ul class="notes-list" id="notesList"></ul>
+        </div>
+    </section>
+
+    <section class="calc-section" id="calculator">
+        <h2 class="section-title">CYBER CALCULATOR</h2>
+        <div class="calculator">
+            <input type="text" class="calc-screen" id="screen" readonly value="0">
+            <div class="calc-buttons">
+                <button class="calc-btn" onclick="clearScreen()">C</button>
+                <button class="calc-btn" onclick="press('/')">/</button>
+                <button class="calc-btn" onclick="press('*')">*</button>
+                <button class="calc-btn" onclick="press('-')">-</button>
+                <button class="calc-btn" onclick="press('7')">7</button>
+                <button class="calc-btn" onclick="press('8')">8</button>
+                <button class="calc-btn" onclick="press('9')">9</button>
+                <button class="calc-btn" onclick="press('+')">+</button>
+                <button class="calc-btn" onclick="press('4')">4</button>
+                <button class="calc-btn" onclick="press('5')">5</button>
+                <button class="calc-btn" onclick="press('6')">6</button>
+                <button class="calc-btn" onclick="press('.')">.</button>
+                <button class="calc-btn" onclick="press('1')">1</button>
+                <button class="calc-btn" onclick="press('2')">2</button>
+                <button class="calc-btn" onclick="press('3')">3</button>
+                <button class="calc-btn" onclick="press('0')">0</button>
+                <button class="calc-btn equal" onclick="calculate()">=</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="contact-section" id="contact">
+        <h2 class="section-title">GET IN TOUCH</h2>
+        <form class="contact-form" onsubmit="event.preventDefault(); alert('මැසේජ් එක ලැබුණා යාළු!');">
+            <input type="text" placeholder="Your Name" required>
+            <input type="email" placeholder="Your Email" required>
+            <textarea placeholder="Your Message..." required></textarea>
+            <button type="submit" class="submit-btn">SEND MESSAGE</button>
+        </form>
+    </section>
+
+    <button class="back-to-top" id="backToTop" onclick="window.scrollTo(0,0);">▲</button>
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
     <script>
-        const canvas = document.getElementById('particleCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // Calculator Logic
+        const screen = document.getElementById('screen');
+        function press(num) { if (screen.value === "0") screen.value = num; else screen.value += num; }
+        function clearScreen() { screen.value = "0"; }
+        function calculate() { try { screen.value = eval(screen.value); } catch (e) { screen.value = "Error"; } }
 
-        let particleArray = [];
-        let hue = 0;
-        const mouse = { x: canvas.width / 2, y: canvas.height / 2, radius: 90 };
-
-        let jumpOffsetY = 0;
-        let jumpVelocity = 0;
-        let isJumping = false;
-        const gravity = 1.5;
-
-        window.addEventListener('mousemove', function(event) {
-            mouse.x = event.x; mouse.y = event.y;
-        });
-
-        class Particle {
-            constructor(x, y) {
-                this.x = x; 
-                this.y = y;
-                this.targetX = x; this.targetY = y;
-                this.size = 2.5;
-                this.baseHue = Math.random() * 360; 
-                this.color = `hsl(${this.baseHue}, 100%, 60%)`;
-                this.density = (Math.random() * 12) + 8; // වඩාත් වේගවත් කලා
-            }
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.fill();
-            }
-            update() {
-                let dx = this.targetX - this.x;
-                let dy = this.targetY - this.y;
-                this.x += dx / this.density;
-                this.y += dy / this.density;
-
-                let mdx = mouse.x - this.x;
-                let mdy = mouse.y - this.y;
-                let distance = Math.sqrt(mdx * mdx + mdy * mdy);
-                
-                if (distance < mouse.radius) {
-                    this.size = 5.5;
-                    this.color = `hsl(${hue}, 100%, 70%)`; 
-                    let force = (mouse.radius - distance) / mouse.radius;
-                    this.x -= mdx * force * 0.2;
-                    this.y -= mdy * force * 0.2;
-                } else {
-                    this.size = 2.5;
-                    this.color = `hsl(${this.baseHue + hue}, 100%, 60%)`;
-                }
-            }
-        }
-
-        function drawStickman() {
-            const sx = canvas.width / 2;
-            const baseSy = canvas.height - 114; 
-            
-            if (isJumping) {
-                jumpVelocity += gravity;
-                jumpOffsetY += jumpVelocity;
-                if (jumpOffsetY >= 0) {
-                    jumpOffsetY = 0;
-                    jumpVelocity = 0;
-                    isJumping = false;
-                }
-            }
-
-            const sy = baseSy + jumpOffsetY; 
-            const angle = Math.atan2(mouse.y - (sy - 50), mouse.x - sx);
-
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#00ffcc'; 
-            ctx.fillStyle = '#00ffcc';
-            ctx.shadowBlur = 12; // Glow එක පොඩ්ඩක් අඩු කලා Lag එක නැති කරන්න
-            ctx.shadowColor = '#00ffcc'; 
-
-            ctx.beginPath();
-            if (isJumping && jumpVelocity < 0) { 
-                ctx.moveTo(sx, sy); ctx.lineTo(sx - 10, sy + 15); ctx.lineTo(sx - 5, sy + 25);
-                ctx.moveTo(sx, sy); ctx.lineTo(sx + 10, sy + 15); ctx.lineTo(sx + 5, sy + 25);
-            } else { 
-                ctx.moveTo(sx, sy); ctx.lineTo(sx - 15, sy - 10); ctx.lineTo(sx - 25, sy + 5);
-                ctx.moveTo(sx, sy); ctx.lineTo(sx + 15, sy - 10); ctx.lineTo(sx + 25, sy + 5);
-            }
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(sx, sy); ctx.lineTo(sx, sy - 45);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(sx, sy - 60, 15, 0, Math.PI * 2);
-            ctx.stroke();
-
-            const eyeXOffset = Math.cos(angle) * 4;
-            const eyeYOffset = Math.sin(angle) * 4;
-            ctx.beginPath();
-            ctx.arc(sx - 5 + eyeXOffset, sy - 61 + eyeYOffset, 2, 0, Math.PI * 2);
-            ctx.arc(sx + 5 + eyeXOffset, sy - 61 + eyeYOffset, 2, 0, Math.PI * 2);
-            ctx.fillStyle = '#fff';
-            ctx.fill();
-
-            ctx.beginPath();
-            if (isJumping) {
-                ctx.moveTo(sx, sy - 35); ctx.lineTo(sx - 20, sy - 65);
-                ctx.moveTo(sx, sy - 35); ctx.lineTo(sx + 20, sy - 65);
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById('themeBtn');
+            const cursor = document.getElementById('customCursor');
+            if (body.getAttribute('data-theme') === 'light') {
+                body.removeAttribute('data-theme');
+                btn.innerText = "LIGHT MODE";
+                updateParticles("#00ff88");
+                cursor.style.backgroundColor = "#00ff88";
             } else {
-                ctx.moveTo(sx, sy - 35); ctx.lineTo(sx - 12, sy - 15);
-                ctx.moveTo(sx, sy - 35); ctx.lineTo(sx + 12, sy - 15);
+                body.setAttribute('data-theme', 'light');
+                btn.innerText = "DARK MODE";
+                updateParticles("#0ea5e9");
+                cursor.style.backgroundColor = "#0ea5e9";
             }
-            ctx.stroke();
-
-            ctx.shadowBlur = 0;
+            refreshCursorListeners();
         }
 
-        function init(text) {
-            particleArray = [];
-            let fontSize = 200;
-            if (text.length > 4) fontSize = 140;
-            if (text.length > 8) fontSize = 80;
+        // Typing Animation
+        const words = ["Web Developer.", "Cyber Enthusiast.", "Tech Innovator."];
+        let wordIndex = 0; let charIndex = 0; let isDeleting = false;
+        const typedTextSpan = document.getElementById("typedText");
 
-            ctx.fillStyle = 'white';
-            ctx.font = `bold ${fontSize}px sans-serif`;
-            
-            let textWidth = ctx.measureText(text).width;
-            ctx.fillText(text, canvas.width/2 - (textWidth/2), canvas.height/2 - 40);
-            
-            const textPixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function type() {
+            const currentWord = words[wordIndex];
+            if (isDeleting) { typedTextSpan.textContent = currentWord.substring(0, charIndex - 1); charIndex--; }
+            else { typedTextSpan.textContent = currentWord.substring(0, charIndex + 1); charIndex++; }
+            let typeSpeed = 100; if (isDeleting) typeSpeed /= 2;
+            if (!isDeleting && charIndex === currentWord.length) { typeSpeed = 2000; isDeleting = true; }
+            else if (isDeleting && charIndex === 0) { isDeleting = false; wordIndex = (wordIndex + 1) % words.length; typeSpeed = 500; }
+            setTimeout(type, typeSpeed);
+        }
 
-            // මෙතන y += 5 සහ x += 5 කලා (Lag එක සම්පූර්ණයෙන්ම නැති කරන්න Performance එක වැඩි කලා)
-            for (let y = 0; y < textPixels.height; y += 5) {
-                for (let x = 0; x < textPixels.width; x += 5) {
-                    if (textPixels.data[(y * 4 * textPixels.width) + (x * 4) + 3] > 128) {
-                        particleArray.push(new Particle(x, y));
-                    }
+        // Notes App Logic
+        const noteInput = document.getElementById('noteInput');
+        const notesList = document.getElementById('notesList');
+        let savedNotes = JSON.parse(localStorage.getItem('cyberNotes')) || [];
+
+        function displayNotes() {
+            notesList.innerHTML = '';
+            savedNotes.forEach((note, index) => {
+                const li = document.createElement('li');
+                li.className = 'note-item';
+                li.innerHTML = `<span>${note}</span><button class="delete-note" onclick="deleteNote(${index})">✕</button>`;
+                notesList.appendChild(li);
+            });
+        }
+        function addNote() {
+            if (noteInput.value.trim() !== '') {
+                savedNotes.push(noteInput.value.trim());
+                localStorage.setItem('cyberNotes', JSON.stringify(savedNotes));
+                noteInput.value = '';
+                displayNotes();
+                refreshCursorListeners();
+            }
+        }
+        function deleteNote(index) { savedNotes.splice(index, 1); localStorage.setItem('cyberNotes', JSON.stringify(savedNotes)); displayNotes(); }
+
+        // 🎯 LOGIN POPUP FUNCTIONS (MODAL LOGIC)
+        const modal = document.getElementById('loginModal');
+        const loginError = document.getElementById('loginError');
+
+        function openLoginModal() {
+            modal.classList.add('show');
+            loginError.innerText = "";
+        }
+        function closeLoginModal() {
+            modal.classList.remove('show');
+            document.getElementById('sitePassword').value = "";
+        }
+        function verifySiteLogin(event) {
+            event.preventDefault();
+            const pass = document.getElementById('sitePassword').value;
+            
+            // 🔐 මෙතන තියෙන්නේ ඔයාගේ රහස් Password එක (දැනට tharul123)
+            if (pass === "tharul123") {
+                alert("🔓 LOGIN SUCCESSFUL! WELCOME THARUL.");
+                closeLoginModal();
+                // මෙතනින් පස්සේ ඔයාට ඕන නම් වෙනම Admin පිටුවකට උනත් යවන්න පුළුවන් window.location.href මඟින්
+            } else {
+                loginError.innerText = "❌ INVALID ACCESS CODE!";
+                document.getElementById('sitePassword').value = "";
+            }
+        }
+
+        // Custom Mouse Cursor JavaScript
+        const cursor = document.getElementById('customCursor');
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        function refreshCursorListeners() {
+            const hoverables = document.querySelectorAll('a, button, .calc-btn, input, textarea, .delete-note, .skill-badge, .login-nav-btn, .close-modal');
+            hoverables.forEach(item => {
+                item.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+                item.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+            });
+        }
+
+        // Back to Top Button Logic
+        const backToTopBtn = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 400) backToTopBtn.classList.add('show');
+            else backToTopBtn.classList.remove('show');
+        });
+
+        // Page Start
+        document.addEventListener("DOMContentLoaded", () => {
+            setTimeout(type, 1000);
+            updateParticles("#00ff88");
+            displayNotes();
+            refreshCursorListeners();
+            noteInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addNote(); });
+        });
+
+        // Particles Logic
+        function updateParticles(particleColor) {
+            particlesJS("particles-js", {
+                particles: {
+                    number: { value: 60, density: { enable: true, value_area: 800 } },
+                    color: { value: particleColor },
+                    shape: { type: "circle" },
+                    opacity: { value: 0.4 },
+                    size: { value: 3, random: true },
+                    line_linked: { enable: true, distance: 150, color: particleColor, opacity: 0.2, width: 1 },
+                    move: { enable: true, speed: 2, out_mode: "out" }
+                },
+                interactivity: {
+                    events: { onhover: { enable: true, mode: "grab" }, onclick: { enable: true, mode: "push" } },
+                    modes: { grab: { distance: 140, line_linked: { opacity: 0.6 } } }
                 }
-            }
+            });
         }
-
-        function animate() {
-            ctx.fillStyle = 'rgba(5, 5, 8, 0.25)'; // Trail එක පොඩ්ඩක් වැඩි කලා Smooth වෙන්න
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            hue += 0.5;
-
-            for (let i = 0; i < particleArray.length; i++) {
-                particleArray[i].update();
-                particleArray[i].draw();
-            }
-
-            drawStickman();
-            requestAnimationFrame(animate);
-        }
-
-        init("AG");
-        animate();
-
-        const searchInput = document.getElementById('search-input');
-        searchInput.addEventListener('input', function(e){
-            init(e.target.value.toUpperCase() || "AG");
-            if (!isJumping) {
-                isJumping = true;
-                jumpVelocity = -16; 
-            }
-        });
-
-        window.addEventListener('resize', function(){
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            init(searchInput.value || "AG");
-        });
     </script>
 </body>
 </html>
