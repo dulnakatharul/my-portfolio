@@ -1,0 +1,15 @@
+{
+  "name": "Tharul Cyber Portfolio",
+  "short_name": "Tharul.io",
+  "start_url": "my_website.html",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#00ff88",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/560/560216.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

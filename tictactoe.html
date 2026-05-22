@@ -1,0 +1,445 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tharul's Cyber Tic-Tac-Toe (6x6 Mega Grid with Hints)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        
+        body {
+            background: #090d16;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #particles-js { 
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            top: 0; 
+            left: 0; 
+            z-index: 1; 
+        }
+
+        .game-box {
+            background: rgba(17, 24, 39, 0.85);
+            border: 2px solid rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+            z-index: 2;
+            width: 480px;
+        }
+
+        h1 { 
+            font-size: 28px; 
+            color: #00ff88; 
+            letter-spacing: 3px; 
+            margin-bottom: 5px; 
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #00ff88;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+
+        .difficulty-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .diff-btn {
+            background: rgba(31, 41, 55, 0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #94a3b8;
+            padding: 6px 15px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .diff-btn.active {
+            background: #00ff88;
+            color: #000;
+            border-color: #00ff88;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+        }
+
+        .status { 
+            font-size: 15px; 
+            color: #94a3b8; 
+            margin-bottom: 15px; 
+            font-weight: bold; 
+            letter-spacing: 1px; 
+            height: 20px;
+        }
+
+        /* 6x6 Grid Layout */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 8px; 
+            width: 400px; 
+            height: 400px; 
+            margin: 0 auto 20px auto; 
+        }
+
+        .cell { 
+            background: rgba(9, 13, 22, 0.7); 
+            border: 1px solid rgba(31, 41, 55, 0.9); 
+            border-radius: 8px; 
+            font-size: 28px; 
+            font-weight: 900; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            user-select: none;
+        }
+
+        .cell:hover { 
+            border-color: #00ff88; 
+            background: rgba(9, 13, 22, 0.9); 
+            transform: scale(1.05); 
+        }
+
+        .cell.x { color: #ff4757; text-shadow: 0 0 10px #ff4757; }
+        .cell.o { color: #2ed573; text-shadow: 0 0 10px #2ed573; }
+        
+        /* 💡 Hint එකක් දුන්නම කොටුව දිලිසෙන Style එක */
+        .cell.hint-glow {
+            background: rgba(234, 179, 8, 0.2) !important;
+            border-color: #eab308 !important;
+            box-shadow: 0 0 20px #eab308;
+            animation: pulse 0.5s infinite alternate;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        .btn-group { 
+            display: flex; 
+            gap: 12px; 
+            justify-content: center; 
+            flex-wrap: wrap;
+        }
+
+        .btn { 
+            background: transparent; 
+            border: 2px solid #00ff88; 
+            color: #00ff88; 
+            padding: 8px 22px; 
+            font-size: 13px; 
+            font-weight: bold; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            text-decoration: none; 
+            transition: 0.3s; 
+        }
+
+        .btn:hover { 
+            background: #00ff88; 
+            color: #000; 
+            box-shadow: 0 0 15px #00ff88; 
+        }
+
+        /* 💡 Hint Button Style */
+        .btn.hint-btn {
+            border-color: #eab308;
+            color: #eab308;
+        }
+        .btn.hint-btn:hover {
+            background: #eab308;
+            color: #000;
+            box-shadow: 0 0 15px #eab308;
+        }
+        .btn:disabled {
+            border-color: #4b5563 !important;
+            color: #4b5563 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            cursor: not-allowed;
+        }
+
+        .btn.back { border-color: #94a3b8; color: #94a3b8; }
+        .btn.back:hover { background: #94a3b8; color: #000; box-shadow: 0 0 15px #94a3b8; }
+    </style>
+</head>
+<body>
+
+    <div id="particles-js"></div>
+
+    <div class="game-box">
+        <h1>6X6 MEGA VS AI</h1>
+        <div class="info-text">CONNECT 4 CELLS IN A ROW TO WIN!</div>
+        
+        <div class="difficulty-container">
+            <button class="diff-btn" id="easyBtn" onclick="setDifficulty('easy')">EASY</button>
+            <button class="diff-btn active" id="normalBtn" onclick="setDifficulty('normal')">NORMAL</button>
+            <button class="diff-btn" id="hardBtn" onclick="setDifficulty('hard')">HARD</button>
+        </div>
+
+        <div class="status" id="gameStatus">YOUR TURN (X)</div>
+        
+        <div class="grid" id="gameGrid"></div>
+
+        <div class="btn-group">
+            <button class="btn hint-btn" id="hintButton" onclick="getHint()">HINT (3 LEFT)</button>
+            <button class="btn" onclick="resetGame()">RESET</button>
+            <a href="my_website.html" class="btn back">HOME</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
+    <script>
+        const size = 6;
+        let board = Array(size * size).fill("");
+        let isGameActive = true;
+        let difficulty = "normal";
+        let hintsLeft = 3; // Hint අවස්ථා 3යි
+        
+        const statusDisplay = document.getElementById('gameStatus');
+        const gridDisplay = document.getElementById('gameGrid');
+        const hintBtnDisplay = document.getElementById('hintButton');
+
+        function createGrid() {
+            gridDisplay.innerHTML = "";
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.addEventListener('click', () => playerMove(cell, i));
+                gridDisplay.appendChild(cell);
+            }
+        }
+
+        function setDifficulty(lvl) {
+            difficulty = lvl;
+            document.querySelectorAll('.diff-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(lvl + 'Btn').classList.add('active');
+            resetGame();
+        }
+
+        function playerMove(cell, index) {
+            if (board[index] !== "" || !isGameActive) return;
+            
+            // Hint එකක් දිලිසෙමින් තිබුණොත් ඒක අයින් කරනවා
+            removeHintGlow();
+
+            board[index] = "X"; 
+            cell.innerText = "X";
+            cell.classList.add("x"); 
+            
+            if (checkWin("X")) {
+                statusDisplay.innerText = "🎉 YOU WON THE MEGA GAME!";
+                statusDisplay.style.color = "#00ff88";
+                isGameActive = false;
+                return;
+            }
+
+            if (board.filter(s => s === "").length === 0) {
+                statusDisplay.innerText = "🤝 IT'S A DRAW!";
+                statusDisplay.style.color = "#ea580c";
+                isGameActive = false;
+                return;
+            }
+
+            isGameActive = false; 
+            statusDisplay.innerText = "AI IS THINKING...";
+            statusDisplay.style.color = "#0ea5e9";
+            setTimeout(aiMove, 400);
+        }
+
+        function aiMove() {
+            let move = -1;
+
+            if (difficulty === "easy") {
+                move = getRandomMove();
+            } else if (difficulty === "normal") {
+                move = Math.random() > 0.5 ? getSmartMove() : getRandomMove();
+            } else if (difficulty === "hard") {
+                move = getSmartMove();
+            }
+
+            if (move === -1) move = getRandomMove();
+
+            board[move] = "O";
+            const cells = document.querySelectorAll('.cell');
+            cells[move].innerText = "O";
+            cells[move].classList.add("o");
+
+            if (checkWin("O")) {
+                statusDisplay.innerText = "🤖 AI WON THE MEGA GAME!";
+                statusDisplay.style.color = "#ff4757";
+                isGameActive = false;
+                return;
+            }
+
+            if (board.filter(s => s === "").length === 0) {
+                statusDisplay.innerText = "🤝 IT'S A DRAW!";
+                statusDisplay.style.color = "#ea580c";
+                isGameActive = false;
+                return;
+            }
+
+            isGameActive = true;
+            statusDisplay.innerText = "YOUR TURN (X)";
+            statusDisplay.style.color = "#94a3b8";
+        }
+
+        function getRandomMove() {
+            let emptyCells = [];
+            board.forEach((val, idx) => { if (val === "") emptyCells.push(idx); });
+            return emptyCells.length > 0 ? emptyCells[Math.floor(Math.random() * emptyCells.length)] : -1;
+        }
+
+        function getSmartMove() {
+            // 1. AI දිනන Move එක
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === "") {
+                    board[i] = "O";
+                    if (checkWin("O")) { board[i] = ""; return i; }
+                    board[i] = "";
+                }
+            }
+            // 2. ප්ලේයර්ව බ්ලොක් කරන Move එක
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === "") {
+                    board[i] = "X";
+                    if (checkWin("X")) { board[i] = ""; return i; }
+                    board[i] = "";
+                }
+            }
+            // 3. උපායමාර්ගික හොඳම මැද කොටු
+            let centerMoves = [14, 15, 20, 21, 8, 9, 10, 11, 26, 27, 28, 29];
+            for (let m of centerMoves) {
+                if (board[m] === "") return m;
+            }
+            return -1;
+        }
+
+        // 💡 Hint එකක් හොයලා ප්ලේයර්ට පෙන්වන Logic එක
+        function getHint() {
+            if (!isGameActive || hintsLeft <= 0) return;
+
+            removeHintGlow();
+
+            let hintMove = -1;
+
+            // 1. ප්ලේයර්ට එකපාරින් දිනන්න තැනක් තියෙනවද බලනවා (හොඳම Hint එක)
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] === "") {
+                    board[i] = "X";
+                    if (checkWin("X")) { hintMove = i; board[i] = ""; break; }
+                    board[i] = "";
+                }
+            }
+
+            // 2. නැත්නම් AI එක ඊළඟට දිනන්න යන තැන බ්ලොක් කරන්න Hint එකක් දෙනවා
+            if (hintMove === -1) {
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] === "") {
+                        board[i] = "O";
+                        if (checkWin("O")) { hintMove = i; board[i] = ""; break; }
+                        board[i] = "";
+                    }
+                }
+            }
+
+            // 3. ඒ දෙකම නැත්නම් මැද කොටුවක් හෝ සාමාන්‍ය හොඳ කොටුවක් දෙනවා
+            if (hintMove === -1) {
+                hintMove = getSmartMove();
+            }
+
+            // Hint එකක් හමු වුණොත් ඒක රන්වන් පාටින් දිලිසෙන්න සලස්වනවා
+            if (hintMove !== -1) {
+                const cells = document.querySelectorAll('.cell');
+                cells[hintMove].classList.add('hint-glow');
+                
+                hintsLeft--;
+                hintBtnDisplay.innerText = `HINT (${hintsLeft} LEFT)`;
+                
+                if (hintsLeft === 0) {
+                    hintBtnDisplay.disabled = true;
+                }
+
+                // තත්පර 1.5කින් Glow එක ස්වයංක්‍රීයව අයින් කරනවා
+                setTimeout(removeHintGlow, 1500);
+            }
+        }
+
+        function removeHintGlow() {
+            document.querySelectorAll('.cell').forEach(cell => cell.classList.remove('hint-glow'));
+        }
+
+        function checkWin(player) {
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c <= size - 4; c++) {
+                    let idx = r * size + c;
+                    if (board[idx] === player && board[idx+1] === player && board[idx+2] === player && board[idx+3] === player) return true;
+                }
+            }
+            for (let c = 0; c < size; c++) {
+                for (let r = 0; r <= size - 4; r++) {
+                    let idx = r * size + c;
+                    if (board[idx] === player && board[idx+size] === player && board[idx+size*2] === player && board[idx+size*3] === player) return true;
+                }
+            }
+            for (let r = 0; r <= size - 4; r++) {
+                for (let c = 0; c <= size - 4; c++) {
+                    let idx = r * size + c;
+                    if (board[idx] === player && board[idx+size+1] === player && board[idx+size*2+2] === player && board[idx+size*3+3] === player) return true;
+                }
+            }
+            for (let r = 0; r <= size - 4; r++) {
+                for (let c = 3; c < size; c++) {
+                    let idx = r * size + c;
+                    if (board[idx] === player && board[idx+size-1] === player && board[idx+size*2-2] === player && board[idx+size*3-3] === player) return true;
+                }
+            }
+            return false;
+        }
+
+        function resetGame() {
+            board = Array(size * size).fill("");
+            isGameActive = true;
+            hintsLeft = 3; // Hint ප්‍රමාණය නැවත 3ක් කරනවා
+            hintBtnDisplay.innerText = "HINT (3 LEFT)";
+            hintBtnDisplay.disabled = false;
+            statusDisplay.innerText = "YOUR TURN (X)";
+            statusDisplay.style.color = "#94a3b8";
+            createGrid();
+        }
+
+        createGrid();
+
+        particlesJS("particles-js", { 
+            particles: { 
+                number: { value: 40 }, 
+                color: { value: "#00ff88" }, 
+                shape: { type: "circle" }, 
+                opacity: { value: 0.2 }, 
+                size: { value: 2 }, 
+                line_linked: { enable: true, distance: 150, color: "#00ff88", opacity: 0.1, width: 1 }, 
+                move: { enable: true, speed: 1.5 } 
+            } 
+        });
+    </script>
+</body>
+</html>
