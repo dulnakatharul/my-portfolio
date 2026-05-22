@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stickman Catch - Mini Game</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0;
+            background: #050510;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+        }
+        /* Game Over UI Screen */
+        #gameover-screen {
+            display: none;
+            position: absolute; z-index: 10;
+            text-align: center; color: #fff;
+        }
+        #gameover-screen h1 {
+            font-size: 60px; color: #ff0055; margin-bottom: 10px;
+            text-shadow: 0 0 20px #ff0055;
+        }
+        #gameover-screen p { font-size: 20px; margin-bottom: 20px; color: #00ffcc; }
+        .restart-btn {
+            background: #00ffcc; border: none; color: #000;
+            padding: 12px 30px; font-size: 18px; font-weight: bold;
+            border-radius: 25px; cursor: pointer; box-shadow: 0 0 15px #00ffcc;
+            transition: 0.3s;
+        }
+        .restart-btn:hover { transform: scale(1.1); box-shadow: 0 0 25px #00ffcc; }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="gameover-screen">
+        <h1>GAME OVER</h1>
+        <p id="final-score">Your Score: 0</p>
+        <button class="restart-btn" onclick="resetGame()">PLAY AGAIN</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gameOverScreen = document.getElementById('gameover-screen');
+        const finalScoreText = document.getElementById('final-score');
+
+        // Game Variables
+        let score = 0;
+        let lives = 3;
+        let isGameOver = false;
+        let stickmenArray = [];
+        let time = 0;
+        let spawnTimer = 0;
+
+        // සර්ච් බාර් එක (Player Paddle)
+        const playerBar = {
+            x: canvas.width / 2 - 125,
+            y: canvas.height - 100,
+            w: 250,
+            h: 45
+        };
+
+        // Mouse එක යන හැටියට බාර් එක හොලවන්න
+        window.addEventListener('mousemove', (e) => {
+            if (!isGameOver) {
+                playerBar.x = e.x - playerBar.w / 2;
+                // ස්ක්‍රීන් එකෙන් එලියට යාම වැලැක්වීම
+                if (playerBar.x < 0) playerBar.x = 0;
+                if (playerBar.x > canvas.width - playerBar.w) playerBar.x = canvas.width - playerBar.w;
+            }
+        });
+
+        // වැටෙන Stickman කෙනෙක්ගේ ව්‍යුහය
+        class GameStickman {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 60) + 30;
+                this.y = -40;
+                this.vy = Math.random() * 3 + 3 + (score * 0.2); // ලකුණු වැඩි වෙද්දී වේගය වැඩි වෙනවා!
+                this.vx = Math.random() * 2 - 1;
+                this.color = `hsl(${Math.random() * 360}, 100%, 65%)`;
+                this.limbWave = Math.random() * 100;
+            }
+            draw() {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+
+                let wave = Math.sin(time * 0.2 + this.limbWave) * 12;
+
+                // ඔළුව
+                ctx.beginPath();
+                ctx.arc(this.x, this.y - 20, 9, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // ඇඟ
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - 11);
+                ctx.lineTo(this.x, this.y + 10);
+                ctx.stroke();
+
+                // හුළඟට වැනෙන අත් කකුල්
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - 5); ctx.lineTo(this.x - 18, this.y - 10 + wave);
+                ctx.moveTo(this.x, this.y - 5); ctx.lineTo(this.x + 18, this.y - 10 - wave);
+                
+                ctx.moveTo(this.x, this.y + 10); ctx.lineTo(this.x - 12, this.y + 25 + wave);
+                ctx.moveTo(this.x, this.y + 10); ctx.lineTo(this.x + 12, this.y + 25 - wave);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
+            update() {
+                this.y += this.vy;
+                this.x += this.vx;
+
+                // බිත්ති වල වැදිලා හැරීම
+                if (this.x < 15 || this.x > canvas.width - 15) this.vx *= -1;
+
+                // 🌟 සර්ච් බාර් එක උඩ වැදුණාද කියා බැලීම (Collision)
+                if (this.x > playerBar.x && this.x < playerBar.x + playerBar.w) {
+                    if (this.y + 25 >= playerBar.y && this.y < playerBar.y + playerBar.h) {
+                        score++; // ලකුණක් එකතු වෙනවා
+                        return true; // අයින් කරන්න කියලා දැනුම් දෙනවා
+                    }
+                }
+
+                // 💀 බිම වැටුණොත් (මිස් වුණොත්)
+                if (this.y > canvas.height + 30) {
+                    lives--; // පණක් යනවා
+                    if (lives <= 0) {
+                        isGameOver = true;
+                        endGame();
+                    }
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        // UI තොරතුරු (Score, Lives) ඇඳීම
+        function drawUI() {
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px monospace';
+            ctx.fillText(`SCORE: ${score}`, 30, 40);
+
+            // Lives වෙනුවට ලස්සන රතු හදවත් 3ක් ඇඳීම ❤️
+            ctx.fillStyle = '#ff0055';
+            let hearts = '';
+            for(let i=0; i<lives; i++) hearts += '❤️ ';
+            ctx.fillText(`LIVES: ${hearts}`, canvas.width - 200, 40);
+        }
+
+        // සර්ච් බාර් එක ඇඳීම
+        function drawPlayerBar() {
+            // Neon Search Box
+            ctx.fillStyle = 'rgba(10, 10, 25, 0.9)';
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ffcc';
+            
+            // රවුම් දාර සහිත සර්ච් බාර් එකක් ඇඳීම
+            ctx.beginPath();
+            ctx.roundRect(playerBar.x, playerBar.y, playerBar.w, playerBar.h, 22);
+            ctx.fill();
+            ctx.stroke();
+
+            // සර්ච් බාර් එක ඇතුලේ "SEARCH" කියා ලස්සනට ලිවීම
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.4)';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText("CATCH THEM HERE!", playerBar.x + playerBar.w/2, playerBar.y + playerBar.h/2 + 5);
+            ctx.textAlign = 'left'; // Reset alignment
+            
+            ctx.shadowBlur = 0;
+        }
+
+        function animate() {
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            time++;
+            spawnTimer++;
+
+            // කාලයත් එක්ක Stickman ලා එන එක වැඩි කිරීම
+            let spawnRate = Math.max(20, 60 - (score * 2)); 
+            if (spawnTimer > spawnRate && !isGameOver) {
+                stickmenArray.push(new GameStickman());
+                spawnTimer = 0;
+            }
+
+            drawPlayerBar();
+
+            // ස්ටික්මන්ලා අප්ඩේට් කිරීම
+            for (let i = stickmenArray.length - 1; i >= 0; i--) {
+                stickmenArray[i].draw();
+                let shouldRemove = stickmenArray[i].update();
+                if (shouldRemove) {
+                    stickmenArray.splice(i, 1);
+                }
+            }
+
+            drawUI();
+
+            if (!isGameOver) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        function endGame() {
+            finalScoreText.innerText = `Your Score: ${score}`;
+            gameOverScreen.style.display = 'block';
+        }
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            isGameOver = false;
+            stickmenArray = [];
+            gameOverScreen.style.display = 'none';
+            animate();
+        }
+
+        // ආරම්භ කිරීම
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            playerBar.y = canvas.height - 100;
+        });
+    </script>
+</body>
+</html>

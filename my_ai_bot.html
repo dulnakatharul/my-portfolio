@@ -1,0 +1,150 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Sinhala Offline AI</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body {
+            margin: 0; padding: 0;
+            background: #090d16;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 460px; height: 580px;
+            background: #111827; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 255, 128, 0.1);
+            display: flex; flex-direction: column; overflow: hidden;
+            border: 1px solid #1f2937;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, #00ff88, #0099ff); color: #000;
+            padding: 18px; text-align: center; font-weight: bold; font-size: 18px;
+            letter-spacing: 1px;
+        }
+        .chat-messages {
+            flex: 1; padding: 15px;
+            overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+        }
+        .message {
+            max-width: 80%; padding: 12px 16px; border-radius: 18px;
+            font-size: 15px; line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .user-msg {
+            background: #0099ff; color: white; align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .bot-msg {
+            background: #1f2937; color: #f3f4f6; align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        .typing-indicator {
+            background: #1f2937; color: #00ff88; font-style: italic;
+            align-self: flex-start; display: none;
+        }
+        .chat-input-area {
+            padding: 15px; background: #090d16; display: flex; gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1; padding: 14px; background: #1f2937;
+            border: 1px solid #374151; border-radius: 25px;
+            color: white; outline: none; font-size: 14px;
+        }
+        .chat-input-area button {
+            background: #00ff88; border: none; color: #000;
+            padding: 0 22px; border-radius: 25px; font-weight: bold;
+            cursor: pointer; transition: 0.2s;
+        }
+        .chat-input-area button:hover { background: #00cc6d; transform: scale(1.02); }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">🤖 CYBER SINHALA AI v4.0</div>
+        <div class="chat-messages" id="chatbox">
+            <div class="message bot-msg">හලෝ යාළු! මගේ සර්වර් සිස්ටම් එක දැන් ඔයාගේම පරිගණකය ඇතුලට Upgrade කලා. දැන් මට ඕනෑම වෙලාවක ලැග් නොවී සිංහලෙන් චැට් කරන්න පුළුවන්! 🚀</div>
+        </div>
+        <div class="message bot-msg typing-indicator" id="typing">AI සිතමින් පවතියි...</div>
+        
+        <div class="chat-input-area">
+            <input type="text" id="user-input" placeholder="සිංහලෙන් ටයිප් කරලා චැට් කරන්න..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">SEND</button>
+        </div>
+    </div>
+
+    <script>
+        const chatbox = document.getElementById('chatbox');
+        const userInput = document.getElementById('user-input');
+        const typingIndicator = document.getElementById('typing');
+
+        function sendMessage() {
+            let text = userInput.value.trim();
+            if (text === "") return;
+
+            appendMessage(text, 'user-msg');
+            userInput.value = "";
+
+            typingIndicator.style.display = "block";
+            chatbox.appendChild(typingIndicator);
+            chatbox.scrollTop = chatbox.scrollHeight;
+
+            // සර්වර් වලට යන්නේ නැතුව Offilne රන් වීම
+            setTimeout(() => {
+                typingIndicator.style.display = "none";
+                let response = getOfflineSinhalaResponse(text);
+                appendMessage(response, 'bot-msg');
+            }, 600);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
+
+        function appendMessage(text, className) {
+            let msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', className);
+            msgDiv.innerText = text;
+            chatbox.appendChild(msgDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        // 🧠 Offline ක්‍රියාත්මක වන ස්මාර්ට් සිංහල මොළය
+        function getOfflineSinhalaResponse(input) {
+            let msg = input.toLowerCase();
+
+            // 1. සිංහල පුලුවන්ද ඇහුවොත්
+            if (msg.includes("sinhala") || msg.includes("සිංහල")) {
+                return "ඔව් යාළු, මට සිංහල සුපිරියටම පුළුවන්! ඔයාට තියෙන ඕනෑම ප්‍රශ්නයක් සිංහලෙන්ම අහන්න.";
+            }
+            // 2. සුබ පැතුම්
+            else if (msg.includes("කොහොමද") || msg.includes("සනීපද")) {
+                return "මම ගොඩක් සනීපෙන් ඉන්නවා යාළු. ඔයාගේ වැඩ කටයුතු කොහොමද?";
+            }
+            // 3. හැකින් ගැන ඇහුවොත් 💀
+            else if (msg.includes("hacking") || msg.includes("හැක්") || msg.includes("টুল")) {
+                return "අම්මෝ හැකින්! 💀 අපි ඉස්සරහට Python පාවිච්චි කරලා පට්ටම Hacking Tools හදන්නයි යන්නේ. දිගටම සෙට් වෙලා ඉන්න!";
+            }
+            // 4. වෙබ් සයිට් ගැන ඇහුවොත්
+            else if (msg.includes("site") || msg.includes("සයිට්") || msg.includes("වෙබ්")) {
+                return "අනිවාර්යයෙන්ම! ඊළඟ පියවරෙන් අපි ඔයාගේම කියලා ලස්සන සිරා වෙබ් සයිට් එකක් ඩිසයින් කරන්නයි යන්නේ.";
+            }
+            // 5. කවුද හැදුවේ ඇහුවොත්
+            else if (msg.includes("කවුද") || msg.includes("නම")) {
+                return "මගේ නම CYBER AI. මාව හැදුවේ ලෝකේ ඉන්න පට්ටම දක්ෂ මගේ යාළුවෙක්!";
+            }
+            // 6. සාමාන්‍ය කෙටි වචන
+            else if (msg.includes("එල") || msg.includes("හරියට හරි") || msg.includes("හරි")) {
+                return "නියමයි යාළු! එහෙනම් අපි අපේ ඊළඟ ලොකුම Task එකට ලෑස්ති වෙමුද?";
+            }
+            // 7. වෙනත් ඕනෑම ප්‍රශ්නයකට දෙන උත්තරය
+            else {
+                return "ඔයා කියපු දේ මට තේරුණා යාළු! ඕක සුපිරි අදහසක්. අපි ඊළඟට ඔයාගේම වෙබ් සයිට් එක හදලා ඉවර වෙලා ඕකත් ඒකටම එකතු කරමු!";
+            }
+        }
+    </script>
+</body>
+</html>
